@@ -33,6 +33,27 @@ sudo systemctl restart noip2
 sudo journalctl -u noip2 -n 50
 ```
 
+## Systemd Service
+
+The service file is at `/etc/systemd/system/noip2.service`. It is configured to wait for full network availability before starting:
+
+```ini
+[Unit]
+Description=No-IP Dynamic DNS Update Client
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/noip2
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Important:** use `network-online.target` (not `network.target`). The latter only waits for interfaces to be up, not for DNS to be resolvable. Starting too early causes the DUC to fail its initial update silently.
+
 ## Notes
 
 - Keep the No-IP account active — free accounts require confirmation every 30 days
