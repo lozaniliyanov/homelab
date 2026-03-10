@@ -72,9 +72,9 @@
 - No HTTPS internally — WireGuard is sufficient
 - WireGuard remains the only external gateway
 - Postgres on host, not in Docker
+- No Redis — Postgres handles event deduplication via fingerprint + timestamp lookup
 
 ## Open Before Execution
-- Redis — in Tier 2 or not?
 - Error watcher — custom container or Loki/Promtail?
 - Exact Traefik config (will be documented step by step during execution)
 
