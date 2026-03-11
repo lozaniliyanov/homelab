@@ -21,8 +21,10 @@ homelab/
 │   ├── pihole.md           # Pi-hole configuration and blocklists
 │   ├── pivpn.md            # PiVPN / WireGuard setup
 │   └── noip.md             # No-IP Dynamic DNS client
-└── network/
-    └── overview.md         # Network layout, port forwarding, DNS
+├── network/
+│   └── overview.md         # Network layout, port forwarding, DNS
+└── automation/
+    └── dotfiles-sync.md    # Daily cron: pull dotfiles and re-apply Claude config
 ```
 
 ## Hardware
