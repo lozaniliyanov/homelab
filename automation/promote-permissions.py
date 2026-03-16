@@ -4,7 +4,9 @@ promote-permissions.py
 
 Runs as a cron on Pi Claude (5am daily).
 Reads all device permissions.json files and permissions.base.json.
-Promotes any permission appearing in 2+ device files to base.
+Promotes any permission appearing in 2+ distinct OS groups to base.
+This prevents OS-specific permissions (e.g. powershell on Windows-only devices)
+from being promoted just because they appear on multiple devices of the same OS.
 Commits and pushes the updated dotfiles.
 Writes a bulletin ticket per device listing promoted permissions to test.
 """
@@ -18,7 +20,14 @@ from pathlib import Path
 
 HOME = Path.home()
 DEVICES = ["rpi5", "work-pc", "home-pc"]
-PROMOTION_THRESHOLD = 2
+
+# OS group each device belongs to — promotion requires 2+ distinct groups
+DEVICE_OS = {
+    "rpi5": "linux",
+    "work-pc": "windows",
+    "home-pc": "windows",
+}
+OS_GROUP_THRESHOLD = 2
 
 
 def load_secrets():
@@ -60,15 +69,15 @@ def main():
         device_data[device] = data
         device_allow[device] = set(data.get("allow", []))
 
-    # Count how many devices have each permission (excluding ones already in base)
-    counts = defaultdict(set)
+    # Count how many distinct OS groups have each permission (excluding ones already in base)
+    os_groups = defaultdict(set)
     for device in DEVICES:
         for perm in device_allow[device]:
             if perm not in base_allow:
-                counts[perm].add(device)
+                os_groups[perm].add(DEVICE_OS[device])
 
-    # Find promotion candidates
-    to_promote = {perm: devices for perm, devices in counts.items() if len(devices) >= PROMOTION_THRESHOLD}
+    # Find promotion candidates — must appear in 2+ distinct OS groups
+    to_promote = {perm: groups for perm, groups in os_groups.items() if len(groups) >= OS_GROUP_THRESHOLD}
 
     if not to_promote:
         print("[promote-permissions] No permissions to promote.")
@@ -122,8 +131,8 @@ def main():
         desc = (
             f"The following permission(s) were promoted from per-device files to "
             f"permissions.base.json on {datetime.now().strftime('%Y-%m-%d')} "
-            f"because they appeared on {PROMOTION_THRESHOLD}+ devices:\n\n"
-            + "\n".join(f"  - {p}" for p in sorted(to_promote.keys()))
+            f"because they appeared across {OS_GROUP_THRESHOLD}+ OS groups (linux + windows):\n\n"
+            + "\n".join(f"  - {p} (groups: {', '.join(sorted(to_promote[p]))})" for p in sorted(to_promote.keys()))
             + "\n\nThese are now in the shared base and removed from per-device files. "
             "On your next /sync they will be included automatically.\n\n"
             "Please verify:\n"
