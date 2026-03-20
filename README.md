@@ -17,6 +17,8 @@ homelab/
 ├── README.md               # This file
 ├── .gitignore
 ├── secrets.env.example     # Template for sensitive values (real file is gitignored)
+├── hardware/
+│   └── pi5.md              # Full hardware spec: Pi 5, SSD, Radxa hat, cooling, networking
 ├── services/
 │   ├── pihole.md           # Pi-hole configuration and blocklists
 │   ├── pivpn.md            # PiVPN / WireGuard setup
@@ -29,8 +31,12 @@ homelab/
 
 ## Hardware
 
-- **Raspberry Pi 5**
+- **Raspberry Pi 5 8GB** with official 27W PSU, active cooler, bumper
+- **OS storage:** 250GB WD Blue SSD (USB 3.0, Sabrent enclosure) — Pi boots from SSD, no SD card
+- **HAT:** Radxa Penta SATA HAT (12V barrel jack PSU) — no SATA drives yet, NAS planned
+- **Network:** Cat 6e to ISP router, 1 Gbps fiber
 - **Router:** H2640
+- See [`hardware/pi5.md`](hardware/pi5.md) for full details
 
 ## Services
 
