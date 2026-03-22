@@ -64,11 +64,13 @@ host    all       all   127.0.0.1/32      scram-sha-256
 host    all       all   ::1/128           scram-sha-256
 host    all       all   172.17.0.1/32     scram-sha-256
 host    all       all   10.46.116.0/24    scram-sha-256
+host    all       all   192.168.1.0/24    scram-sha-256
 EOF
 ```
 
 - `local peer` — OS-level trust for the postgres system user (emergency access)
 - `172.17.0.1/32` — Docker bridge (not installed yet, safe to include now)
+- `192.168.1.0/24` — home LAN (direct access without VPN)
 - `10.46.116.0/24` — WireGuard VPN subnet (covers all devices: Pi, Work PC, Home PC)
 
 ---
