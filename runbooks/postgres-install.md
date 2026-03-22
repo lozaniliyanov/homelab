@@ -4,6 +4,8 @@ Human-executed installation guide. Follow each step in order. At each **PASTE** 
 
 Based on: `whiteboard/projects/active/postgres-on-pi/01-rnd/findings.md`
 
+**User model:** single superuser `lozan_admin` for all devices and development work. Future per-app roles (DML-only) created as needed.
+
 ---
 
 ## Pre-flight checks
@@ -37,28 +39,18 @@ systemctl is-active postgresql
 
 ## Step 2 — Memory tuning
 
-Edit `/etc/postgresql/17/main/postgresql.conf`. Find and change these lines (they exist but may be commented out — uncomment and set):
-
-```ini
-shared_buffers = 1GB
-effective_cache_size = 6GB
-work_mem = 8MB
-maintenance_work_mem = 256MB
-max_wal_size = 1GB
-timezone = 'Etc/UTC'
-listen_addresses = '*'
-```
-
-Do this with:
 ```bash
 sudo -u postgres psql -c "ALTER SYSTEM SET shared_buffers = '1GB';"
-sudo -u postgres psql -c "ALTER SYSTEM SET effective_cache_size = '6GB';"
+sudo -u postgres psql -c "ALTER SYSTEM SET effective_cache_size = '4GB';"
 sudo -u postgres psql -c "ALTER SYSTEM SET work_mem = '8MB';"
 sudo -u postgres psql -c "ALTER SYSTEM SET maintenance_work_mem = '256MB';"
 sudo -u postgres psql -c "ALTER SYSTEM SET max_wal_size = '1GB';"
 sudo -u postgres psql -c "ALTER SYSTEM SET timezone = 'Etc/UTC';"
 sudo -u postgres psql -c "ALTER SYSTEM SET listen_addresses = '*';"
+sudo -u postgres psql -c "ALTER SYSTEM SET max_connections = '20';"
 ```
+
+Note: `effective_cache_size = 4GB` (reduced from 6GB to leave more headroom for other services).
 
 ---
 
@@ -75,43 +67,30 @@ host    all       all   10.46.116.0/24    scram-sha-256
 EOF
 ```
 
-Note: the `172.17.0.1/32` line is for Docker (not installed yet — safe to include now).
+- `local peer` — OS-level trust for the postgres system user (emergency access)
+- `172.17.0.1/32` — Docker bridge (not installed yet, safe to include now)
+- `10.46.116.0/24` — WireGuard VPN subnet (covers all devices: Pi, Work PC, Home PC)
 
 ---
 
-## Step 4 — Create users and databases
+## Step 4 — Create user and databases
 
-Pick passwords for `pi_admin` and `lozan` and add them to `~/git-personal/homelab/secrets.env`:
-
+Add password to secrets.env first:
 ```bash
-# Add to secrets.env — replace with real passwords
-echo 'POSTGRES_PI_ADMIN_PASSWORD=CHANGEME' >> ~/git-personal/homelab/secrets.env
-echo 'POSTGRES_LOZAN_PASSWORD=CHANGEME' >> ~/git-personal/homelab/secrets.env
+echo 'POSTGRES_LOZAN_ADMIN_PASSWORD=CHANGEME' >> ~/git-personal/homelab/secrets.env
 ```
 
-Then create the users (you will be prompted to type the password for each):
-
+Create the superuser (you will be prompted to type the password):
 ```bash
-sudo -u postgres createuser --superuser pi_admin
-sudo -u postgres psql -c "\password pi_admin"
-
-sudo -u postgres createuser --no-superuser --no-createdb --no-createrole lozan
-sudo -u postgres psql -c "\password lozan"
+sudo -u postgres createuser --superuser lozan_admin
+sudo -u postgres psql -c "\password lozan_admin"
 ```
 
-Create the databases:
-
+Create the databases owned by lozan_admin:
 ```bash
-sudo -u postgres createdb -O pi_admin -E UTF8 -l C -T template0 bulletins
-sudo -u postgres createdb -O pi_admin -E UTF8 -l C -T template0 whiteboard
-sudo -u postgres createdb -O pi_admin -E UTF8 -l C -T template0 automation
-```
-
-Grant lozan access:
-```bash
-sudo -u postgres psql -c "GRANT CONNECT ON DATABASE bulletins TO lozan;"
-sudo -u postgres psql -c "GRANT CONNECT ON DATABASE whiteboard TO lozan;"
-sudo -u postgres psql -c "GRANT CONNECT ON DATABASE automation TO lozan;"
+sudo -u postgres createdb -O lozan_admin -E UTF8 -l C -T template0 bulletins
+sudo -u postgres createdb -O lozan_admin -E UTF8 -l C -T template0 whiteboard
+sudo -u postgres createdb -O lozan_admin -E UTF8 -l C -T template0 automation
 ```
 
 ---
@@ -129,11 +108,10 @@ sudo -u postgres psql -c "\l"
 sudo -u postgres psql -c "\du"
 ```
 
-Then test network connectivity (from the Pi itself, simulating a remote connection):
+Then test network connectivity as lozan_admin:
 ```bash
-psql -h 127.0.0.1 -U lozan -d bulletins -c "SELECT version();"
+psql -h 127.0.0.1 -U lozan_admin -d bulletins -c "SELECT version();"
 ```
-You'll be prompted for the lozan password.
 
 **PASTE the output.**
 
@@ -142,7 +120,7 @@ You'll be prompted for the lozan password.
 ## Step 6 — Create schemas and tables
 
 ```bash
-psql -h 127.0.0.1 -U pi_admin -d bulletins <<'EOF'
+psql -h 127.0.0.1 -U lozan_admin -d bulletins <<'EOF'
 CREATE SCHEMA IF NOT EXISTS bulletins;
 CREATE TABLE bulletins.tickets (
     id           TEXT PRIMARY KEY,
@@ -158,13 +136,11 @@ CREATE TABLE bulletins.tickets (
 );
 CREATE INDEX ON bulletins.tickets (status);
 CREATE INDEX ON bulletins.tickets (timestamp);
-GRANT USAGE ON SCHEMA bulletins TO lozan;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA bulletins TO lozan;
 EOF
 ```
 
 ```bash
-psql -h 127.0.0.1 -U pi_admin -d whiteboard <<'EOF'
+psql -h 127.0.0.1 -U lozan_admin -d whiteboard <<'EOF'
 CREATE SCHEMA IF NOT EXISTS whiteboard;
 CREATE TABLE whiteboard.pipeline_runs (
     id           SERIAL PRIMARY KEY,
@@ -179,14 +155,11 @@ CREATE TABLE whiteboard.pipeline_runs (
 );
 CREATE INDEX ON whiteboard.pipeline_runs (project, phase);
 CREATE INDEX ON whiteboard.pipeline_runs (started_at);
-GRANT USAGE ON SCHEMA whiteboard TO lozan;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA whiteboard TO lozan;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA whiteboard TO lozan;
 EOF
 ```
 
 ```bash
-psql -h 127.0.0.1 -U pi_admin -d automation <<'EOF'
+psql -h 127.0.0.1 -U lozan_admin -d automation <<'EOF'
 CREATE SCHEMA IF NOT EXISTS automation;
 CREATE TABLE automation.permission_events (
     id         SERIAL PRIMARY KEY,
@@ -196,13 +169,10 @@ CREATE TABLE automation.permission_events (
     timestamp  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX ON automation.permission_events (device, timestamp);
-GRANT USAGE ON SCHEMA automation TO lozan;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA automation TO lozan;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA automation TO lozan;
 EOF
 ```
 
-**PASTE output** (should show CREATE TABLE, CREATE INDEX, GRANT for each).
+**PASTE output** (should show CREATE TABLE, CREATE INDEX for each).
 
 ---
 
@@ -214,9 +184,9 @@ mkdir -p ~/backups/postgres
 
 Add to crontab (`crontab -e`):
 ```
-0 2 * * * pg_dump -h 127.0.0.1 -U pi_admin bulletins > ~/backups/postgres/bulletins-$(date +\%Y\%m\%d).sql 2>&1
-0 2 * * * pg_dump -h 127.0.0.1 -U pi_admin whiteboard > ~/backups/postgres/whiteboard-$(date +\%Y\%m\%d).sql 2>&1
-0 2 * * * pg_dump -h 127.0.0.1 -U pi_admin automation > ~/backups/postgres/automation-$(date +\%Y\%m\%d).sql 2>&1
+0 2 * * * pg_dump -h 127.0.0.1 -U lozan_admin bulletins > ~/backups/postgres/bulletins-$(date +\%Y\%m\%d).sql 2>&1
+0 2 * * * pg_dump -h 127.0.0.1 -U lozan_admin whiteboard > ~/backups/postgres/whiteboard-$(date +\%Y\%m\%d).sql 2>&1
+0 2 * * * pg_dump -h 127.0.0.1 -U lozan_admin automation > ~/backups/postgres/automation-$(date +\%Y\%m\%d).sql 2>&1
 5 2 * * * find ~/backups/postgres/ -name "*.sql" -mtime +7 -delete
 ```
 
@@ -236,11 +206,11 @@ sudo reboot
 Wait ~60 seconds, reconnect via SSH. **PASTE output of**:
 ```bash
 systemctl is-active postgresql
-psql -h 127.0.0.1 -U lozan -d bulletins -c "SELECT 'postgres survived reboot' AS status;"
+psql -h 127.0.0.1 -U lozan_admin -d bulletins -c "SELECT 'postgres survived reboot' AS status;"
 ```
 
 ---
 
 ## Done
 
-Once all steps are verified, Claude will update the whiteboard project status and set up the backup cron properly.
+Once all steps are verified, Claude will update the whiteboard project status.
