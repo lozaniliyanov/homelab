@@ -1,1 +1,3 @@
 secrets.env
+services/*/data/
+services/*/.env
