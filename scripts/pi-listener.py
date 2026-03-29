@@ -139,7 +139,9 @@ def process_file(path):
     in_prog.write_text(text, encoding="utf-8")
 
     # Dispatch
-    if action == "claude-task":
+    if not body.strip():
+        success, output = False, "empty body — nothing to process"
+    elif action == "claude-task":
         success, output = handle_claude_task(body)
     else:
         success, output = False, f"unknown action: {action}"
