@@ -14,13 +14,16 @@ All stacks live under `/opt/stacks/` — this is Dockge's stacks directory.
 
 ### uni
 - **Path:** `/opt/stacks/uni/`
-- **Port:** `5002` → internal `5001`
+- **Port:** `5002` → internal `5001` (Flask web app)
+- **DB port:** `5433` → internal `5432` (Postgres, exposed for host-side agents)
 - **Build:** `./app` (Flask app, Python 3.11-slim)
 - **Purpose:** University study web app — lecture notes, risposte (answers reveal/hide), quiz system with progress tracking.
 - **Volumes:** `/home/lozaniliyanov/git-personal/uni:/uni:ro` — mounts the uni repo read-only
 - **DB:** Postgres 16 (`uni_db` named volume) — stores quiz progress
+- **DB URL (from host):** `postgresql://uni:uni@localhost:5433/uni`
 - **Env:** `DATABASE_URL`, `UNI_REPO`
 - **App source:** `/opt/stacks/uni/app/` — Flask (`app.py`), templates, static JS/CSS
+- **Nightly agents:** `~/git-personal/uni/scripts/orchestrator.py` runs at 10:30pm — material-organizer + quiz-generator per active course
 
 ### homebase-web
 - **Path:** `/opt/stacks/homebase-web/`

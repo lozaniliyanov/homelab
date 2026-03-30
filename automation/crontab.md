@@ -13,6 +13,7 @@ The order matters. Each morning:
 Before the night shift:
 4. `apply.py` runs again to catch any permissions approved during daytime sessions
 5. `orchestrator` (whiteboard) runs with fully up-to-date `settings.json`
+6. `orchestrator` (uni) runs after whiteboard — generates daily quiz per active course
 
 ## Jobs
 
@@ -23,6 +24,7 @@ Before the night shift:
 | 5:30am daily | `check-tickets.py` | `~/logs/check-tickets.log` |
 | 9:50pm daily | dotfiles pull + apply.py | `~/logs/dotfiles-sync.log` |
 | 10:00pm daily | whiteboard orchestrator | `~/logs/whiteboard/orchestrator.log` |
+| 10:30pm daily | uni orchestrator | `~/logs/uni/orchestrator.log` |
 
 ## Crontab entries
 
@@ -32,6 +34,7 @@ Before the night shift:
 30 5 * * * echo "=== $(date) ===" >> /home/lozaniliyanov/logs/check-tickets.log 2>&1 && python3 /home/lozaniliyanov/git-personal/homelab/automation/check-tickets.py >> /home/lozaniliyanov/logs/check-tickets.log 2>&1
 50 21 * * * echo "=== $(date) ===" >> /home/lozaniliyanov/logs/dotfiles-sync.log 2>&1 && git -C /home/lozaniliyanov/git-personal/dotfiles pull >> /home/lozaniliyanov/logs/dotfiles-sync.log 2>&1 && python3 /home/lozaniliyanov/git-personal/dotfiles/claude/scripts/apply.py rpi5 >> /home/lozaniliyanov/logs/dotfiles-sync.log 2>&1
 0 22 * * * mkdir -p /home/lozaniliyanov/logs/whiteboard && echo "=== $(date) ===" >> /home/lozaniliyanov/logs/whiteboard/orchestrator.log 2>&1 && python3 /home/lozaniliyanov/git-personal/whiteboard/scripts/orchestrator.py >> /home/lozaniliyanov/logs/whiteboard/orchestrator.log 2>&1
+30 22 * * * mkdir -p /home/lozaniliyanov/logs/uni && echo "=== $(date) ===" >> /home/lozaniliyanov/logs/uni/orchestrator.log 2>&1 && python3 /home/lozaniliyanov/git-personal/uni/scripts/orchestrator.py >> /home/lozaniliyanov/logs/uni/orchestrator.log 2>&1
 ```
 
 ## Log files
