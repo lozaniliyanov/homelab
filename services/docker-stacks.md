@@ -23,7 +23,7 @@ All stacks live under `/opt/stacks/` — this is Dockge's stacks directory.
 - **DB URL (from host):** `postgresql://uni:uni@localhost:5433/uni`
 - **Env:** `DATABASE_URL`, `UNI_REPO`
 - **App source:** `/opt/stacks/uni/app/` — Flask (`app.py`), templates, static JS/CSS
-- **Nightly agents:** `~/git-personal/uni/scripts/orchestrator.py` runs at 10:30pm — material-organizer + quiz-generator per active course
+- **Nightly agents:** `~/git-personal/uni/scripts/orchestrator.py` runs at 10:30pm — Python handles all deterministic work (zip extraction, PDF classification, DB queries, weakness scoring, git ops); Claude invoked only for creative content (study notes, quiz questions). Support modules: `material_processor.py` (filesystem), `quiz_engine.py` (DB + scoring). PDFs are auto-classified: text-heavy → pypdf extraction (no tools), diagram-rich → Claude visual read.
 
 ### homebase-web
 - **Path:** `/opt/stacks/homebase-web/`
