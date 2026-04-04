@@ -62,14 +62,14 @@ sudo tee /etc/postgresql/17/main/pg_hba.conf <<'EOF'
 local   all       all                     peer
 host    all       all   127.0.0.1/32      scram-sha-256
 host    all       all   ::1/128           scram-sha-256
-host    all       all   172.17.0.1/32     scram-sha-256
+host    all       all   172.16.0.0/12     scram-sha-256
 host    all       all   10.46.116.0/24    scram-sha-256
 host    all       all   192.168.1.0/24    scram-sha-256
 EOF
 ```
 
 - `local peer` — OS-level trust for the postgres system user (emergency access)
-- `172.17.0.1/32` — Docker bridge (not installed yet, safe to include now)
+- `172.16.0.0/12` — full Docker subnet range (covers all Docker bridge/overlay networks: 172.16–172.31)
 - `192.168.1.0/24` — home LAN (direct access without VPN)
 - `10.46.116.0/24` — WireGuard VPN subnet (covers all devices: Pi, Work PC, Home PC)
 
@@ -94,6 +94,17 @@ sudo -u postgres createdb -O lozan_admin -E UTF8 -l C -T template0 bulletins
 sudo -u postgres createdb -O lozan_admin -E UTF8 -l C -T template0 whiteboard
 sudo -u postgres createdb -O lozan_admin -E UTF8 -l C -T template0 automation
 ```
+
+**Convention — per-app databases for Docker stacks:**
+Docker stacks that need a database do NOT get their own Postgres container. Instead, create a dedicated database and user on this system instance:
+```bash
+sudo -u postgres psql -c "CREATE USER <app> WITH PASSWORD '<password>';"
+sudo -u postgres psql -c "CREATE DATABASE <app> OWNER <app>;"
+```
+The container connects via `host.docker.internal:5432` (requires `extra_hosts: host.docker.internal:host-gateway` in compose.yaml).
+
+Current per-app databases:
+- `uni` / user `uni` — university study app quiz progress
 
 ---
 

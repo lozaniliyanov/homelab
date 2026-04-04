@@ -15,12 +15,11 @@ All stacks live under `/opt/stacks/` — this is Dockge's stacks directory.
 ### uni
 - **Path:** `/opt/stacks/uni/`
 - **Port:** `5002` → internal `5001` (Flask web app)
-- **DB port:** `5433` → internal `5432` (Postgres, exposed for host-side agents)
 - **Build:** `./app` (Flask app, Python 3.11-slim)
 - **Purpose:** University study web app — lecture notes, risposte (answers reveal/hide), quiz system with progress tracking.
 - **Volumes:** `/home/lozaniliyanov/git-personal/uni:/uni:ro` — mounts the uni repo read-only
-- **DB:** Postgres 16 (`uni_db` named volume) — stores quiz progress
-- **DB URL (from host):** `postgresql://uni:uni@localhost:5433/uni`
+- **DB:** System Postgres 17 (`uni` database, `uni` user) — stores quiz progress. Container connects via `host.docker.internal:5432`.
+- **DB URL (from host):** `postgresql://uni:uni@localhost:5432/uni`
 - **Env:** `DATABASE_URL`, `UNI_REPO`
 - **App source:** `/opt/stacks/uni/app/` — Flask (`app.py`), templates, static JS/CSS
 - **Nightly agents:** `~/git-personal/uni/scripts/orchestrator.py` runs at 10:30pm — Python handles all deterministic work (zip extraction, PDF classification, DB queries, weakness scoring, git ops); Claude invoked only for creative content (study notes, quiz questions). Support modules: `material_processor.py` (filesystem), `quiz_engine.py` (DB + scoring). PDFs are auto-classified: text-heavy → pypdf extraction (no tools), diagram-rich → Claude visual read.
