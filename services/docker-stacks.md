@@ -24,6 +24,21 @@ All stacks live under `/opt/stacks/` — this is Dockge's stacks directory.
 - **App source:** `/opt/stacks/uni/app/` — Flask (`app.py`), templates, static JS/CSS
 - **Nightly agents:** `~/git-personal/uni/scripts/orchestrator.py` runs at 10:30pm — Python handles all deterministic work (zip extraction, PDF classification, DB queries, weakness scoring, git ops); Claude invoked only for creative content (study notes, quiz questions). Support modules: `material_processor.py` (filesystem), `quiz_engine.py` (DB + scoring). PDFs are auto-classified: text-heavy → pypdf extraction (no tools), diagram-rich → Claude visual read.
 
+### firefly
+- **Path:** `/opt/stacks/firefly/`
+- **Port:** `5003` → `firefly_iii` (Firefly III main app)
+- **Port:** `5004` → `firefly_importer` (Data Importer — CSV imports from banks)
+- **Images:** `fireflyiii/core:latest`, `fireflyiii/data-importer:latest`
+- **Purpose:** Self-hosted personal finance manager. Tracks expenses fed by CSV exports from Trade Republic (and previously Revolut).
+- **DB:** System Postgres 17 (`firefly` database, `firefly` user) — connects via `host.docker.internal:5432`. Credentials in `secrets.env`.
+- **Volumes:**
+  - `firefly_upload` — Firefly III upload directory (`/var/www/html/storage/upload`)
+  - `firefly_importer_config` — Data Importer config storage (`/var/www/html/storage`)
+- **Financial files:** `pi-share/financial-hq/` — Trade Republic CSV exports and import mappings live here
+- **Importer access token:** Set `FIREFLY_III_ACCESS_TOKEN` in compose.yaml after initial Firefly III setup (create a Personal Access Token under Profile → OAuth)
+- **Note:** Importer CSV mapping config for Trade Republic is pending — Trade Republic export format still being researched. Configure after format is confirmed.
+- **Env:** `APP_KEY`, `APP_URL`, `DB_*` (see compose.yaml), `FIREFLY_III_URL`, `VANITY_URL`
+
 ### homebase-web
 - **Path:** `/opt/stacks/homebase-web/`
 - **Port:** `8888`

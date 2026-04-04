@@ -105,6 +105,7 @@ The container connects via `host.docker.internal:5432` (requires `extra_hosts: h
 
 Current per-app databases:
 - `uni` / user `uni` — university study app quiz progress
+- `firefly` / user `firefly` — Firefly III personal finance manager
 
 ---
 
